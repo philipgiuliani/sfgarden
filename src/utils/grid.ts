@@ -10,14 +10,6 @@ export function parseGridSize(size: string): { cols: number; rows: number } {
 }
 
 /**
- * Returns total number of squares in a grid.
- */
-export function totalSquares(size: string): number {
-  const { cols, rows } = parseGridSize(size);
-  return cols * rows;
-}
-
-/**
  * Converts a 1-based column index to a letter label (1→"A", 26→"Z", 27→"AA", …).
  */
 export function colToLetter(col: number): string {
@@ -45,30 +37,10 @@ export function letterToCol(letter: string): number {
 }
 
 /**
- * Converts a 1-based square number to an alphanumeric coordinate label like "A1".
- * Columns are letters (X axis), rows are numbers (Y axis).
- * Square 1 is top-left (A1), numbered left-to-right then top-to-bottom.
+ * Parses an alphanumeric coordinate label like "A1" or "B3" and validates it
+ * against the grid bounds. Throws if the label is invalid or out of range.
  */
-export function squareToLabel(square: number, size: string): string {
-  const { cols, rows } = parseGridSize(size);
-  const total = cols * rows;
-
-  if (square < 1 || square > total) {
-    throw new Error(
-      `Square ${square} is out of range for a ${size} grid (1-${total}).`,
-    );
-  }
-
-  const row = Math.ceil(square / cols);
-  const col = ((square - 1) % cols) + 1;
-  return `${colToLetter(col)}${row}`;
-}
-
-/**
- * Parses an alphanumeric coordinate label like "A1" or "B3" into a 1-based square number.
- * Validates that the coordinate is within the grid bounds.
- */
-export function labelToSquare(label: string, size: string): number {
+function labelToSquare(label: string, size: string): void {
   const { cols, rows } = parseGridSize(size);
   const match = label.trim().toUpperCase().match(/^([A-Z]+)(\d+)$/);
 
@@ -91,8 +63,6 @@ export function labelToSquare(label: string, size: string): number {
       `Row ${row} is out of range for a ${size} grid (1–${rows}).`,
     );
   }
-
-  return (row - 1) * cols + col;
 }
 
 /**
@@ -100,61 +70,6 @@ export function labelToSquare(label: string, size: string): number {
  */
 export function validateLabels(labels: string[], size: string): void {
   for (const label of labels) {
-    labelToSquare(label, size); // throws on invalid
-  }
-}
-
-/**
- * Converts a 1-based square number to (row, col) coordinates.
- * Square 1 is top-left, numbered left-to-right then top-to-bottom.
- */
-export function squareToCoords(
-  square: number,
-  size: string,
-): { row: number; col: number } {
-  const { cols, rows } = parseGridSize(size);
-  const total = cols * rows;
-
-  if (square < 1 || square > total) {
-    throw new Error(
-      `Square ${square} is out of range for a ${size} grid (1-${total}).`,
-    );
-  }
-
-  const row = Math.ceil(square / cols);
-  const col = ((square - 1) % cols) + 1;
-  return { row, col };
-}
-
-/**
- * Converts (row, col) coordinates to a 1-based square number.
- */
-export function coordsToSquare(
-  row: number,
-  col: number,
-  size: string,
-): number {
-  const { cols, rows } = parseGridSize(size);
-
-  if (row < 1 || row > rows || col < 1 || col > cols) {
-    throw new Error(
-      `Coordinates (${row}, ${col}) are out of range for a ${size} grid.`,
-    );
-  }
-
-  return (row - 1) * cols + col;
-}
-
-/**
- * Validates that all square numbers are valid for the given grid size.
- */
-export function validateSquares(squares: number[], size: string): void {
-  const total = totalSquares(size);
-  for (const sq of squares) {
-    if (sq < 1 || sq > total) {
-      throw new Error(
-        `Square ${sq} is out of range for a ${size} grid (1-${total}).`,
-      );
-    }
+    labelToSquare(label, size);
   }
 }
