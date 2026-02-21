@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateId } from "../utils/ids.js";
-import { validateLabels, labelToSquare, squareToLabel } from "../utils/grid.js";
+import { validateLabels } from "../utils/grid.js";
 
 export function registerPlantingTools(
   server: McpServer,
@@ -34,7 +34,7 @@ export function registerPlantingTools(
     async ({ garden_id, squares, plant_name, variety, count, planted_at, notes }) => {
       const supabase = getClient();
 
-      // Get garden to validate squares
+      // Get garden to validate coordinates
       const { data: garden, error: gardenErr } = await supabase
         .from("gardens")
         .select("size")
@@ -45,43 +45,37 @@ export function registerPlantingTools(
         return { content: [{ type: "text", text: `Error: Garden ${garden_id} not found.` }], isError: true };
       }
 
-      // Validate and convert labels to square integers
-      let squareInts: number[];
+      // Normalise to uppercase and validate against grid bounds
+      const labels = squares.map((s) => s.toUpperCase());
       try {
-        validateLabels(squares, garden.size);
-        squareInts = squares.map((label) => labelToSquare(label, garden.size));
+        validateLabels(labels, garden.size);
       } catch (e: any) {
         return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
       }
 
-      // Check for conflicts
+      // Check for conflicts (square column now stores text labels)
       const { data: existing } = await supabase
         .from("plantings")
         .select("square, plant_name")
         .eq("garden_id", garden_id)
         .eq("status", "active")
-        .in("square", squareInts);
+        .in("square", labels);
 
       const warnings: string[] = [];
       if (existing && existing.length > 0) {
         for (const e of existing) {
-          const label = squareToLabel(e.square, garden.size);
-          warnings.push(
-            `${label} already has active planting: ${e.plant_name}`,
-          );
+          warnings.push(`${e.square} already has active planting: ${e.plant_name}`);
         }
       }
 
-      // Create plantings
+      // Create plantings — store the label directly
       const created: string[] = [];
-      for (let i = 0; i < squares.length; i++) {
-        const label = squares[i].toUpperCase();
-        const sq = squareInts[i];
+      for (const label of labels) {
         const id = await generateId(supabase, "plantings", "P");
         const { error } = await supabase.from("plantings").insert({
           id,
           garden_id,
-          square: sq,
+          square: label,
           plant_name,
           variety: variety ?? null,
           count: count ?? 1,
@@ -118,7 +112,7 @@ export function registerPlantingTools(
         .from("plantings")
         .update({ status })
         .eq("id", planting_id)
-        .select("id, plant_name, square, garden_id")
+        .select("id, plant_name, square")
         .single();
 
       if (error || !data) {
@@ -128,26 +122,11 @@ export function registerPlantingTools(
         };
       }
 
-      // Fetch garden size to convert square to label
-      let label = `square ${data.square}`;
-      const { data: garden } = await supabase
-        .from("gardens")
-        .select("size")
-        .eq("id", data.garden_id)
-        .single();
-      if (garden) {
-        try {
-          label = squareToLabel(data.square, garden.size);
-        } catch {
-          // fall back to raw square number
-        }
-      }
-
       return {
         content: [
           {
             type: "text",
-            text: `Planting ${data.id} (${data.plant_name}, ${label}) status set to "${status}".`,
+            text: `Planting ${data.id} (${data.plant_name}, ${data.square}) status set to "${status}".`,
           },
         ],
       };

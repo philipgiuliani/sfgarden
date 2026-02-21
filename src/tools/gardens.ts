@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateId } from "../utils/ids.js";
-import { parseGridSize, colToLetter } from "../utils/grid.js";
+import { parseGridSize, colToLetter, letterToCol } from "../utils/grid.js";
 
 export function registerGardenTools(
   server: McpServer,
@@ -54,15 +54,19 @@ export function registerGardenTools(
           .eq("garden_id", garden.id)
           .not("phase", "in", '("transplanted","failed")');
 
-        // Build grid display (cells hold 3-char plant abbreviation or "·")
+        // Build grid display — square column now stores text labels like "A1"
         const grid: string[][] = Array.from({ length: rows }, () =>
           Array.from({ length: cols }, () => "·"),
         );
 
         for (const p of activePlantings ?? []) {
-          const row = Math.ceil(p.square / cols) - 1;
-          const col = (p.square - 1) % cols;
-          grid[row][col] = p.plant_name.substring(0, 3);
+          const match = (p.square as string)?.match(/^([A-Z]+)(\d+)$/i);
+          if (!match) continue;
+          const colIdx = letterToCol(match[1]) - 1; // 0-indexed
+          const rowIdx = parseInt(match[2], 10) - 1; // 0-indexed
+          if (rowIdx >= 0 && rowIdx < rows && colIdx >= 0 && colIdx < cols) {
+            grid[rowIdx][colIdx] = p.plant_name.substring(0, 3);
+          }
         }
 
         // Column header: "     A    B    C    D"

@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateId } from "../utils/ids.js";
-import { labelToSquare } from "../utils/grid.js";
+import { validateLabels } from "../utils/grid.js";
 
 export function registerNoteTools(
   server: McpServer,
@@ -26,7 +26,7 @@ export function registerNoteTools(
     async ({ garden_id, category, content, square, planting_id }) => {
       const supabase = getClient();
 
-      // Verify garden exists (and get size if we need to validate a square label)
+      // Verify garden exists (and get size for coordinate validation)
       const { data: garden, error: gardenErr } = await supabase
         .from("gardens")
         .select("id, size")
@@ -40,11 +40,11 @@ export function registerNoteTools(
         };
       }
 
-      // Validate and convert square label to integer if provided
-      let squareInt: number | null = null;
-      if (square) {
+      // Validate coordinate label if provided
+      const label = square ? square.toUpperCase() : null;
+      if (label) {
         try {
-          squareInt = labelToSquare(square, garden.size);
+          validateLabels([label], garden.size);
         } catch (e: any) {
           return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
         }
@@ -57,7 +57,7 @@ export function registerNoteTools(
         garden_id,
         category,
         content,
-        square: squareInt,
+        square: label,
         planting_id: planting_id ?? null,
       });
 
@@ -66,7 +66,7 @@ export function registerNoteTools(
       }
 
       let text = `Note added (${id}, ${category})`;
-      if (square) text += ` for ${square.toUpperCase()}`;
+      if (label) text += ` for ${label}`;
       if (planting_id) text += ` linked to planting ${planting_id}`;
       text += ".";
 
