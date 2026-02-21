@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateId } from "../utils/ids.js";
+import { labelToSquare } from "../utils/grid.js";
 
 export function registerNoteTools(
   server: McpServer,
@@ -16,16 +17,19 @@ export function registerNoteTools(
         .enum(["observation", "task", "plan", "issue", "general"])
         .describe("Note category"),
       content: z.string().describe("Note content"),
-      square: z.number().int().positive().optional().describe("Optional square number"),
+      square: z
+        .string()
+        .optional()
+        .describe('Optional coordinate label, e.g. "A1" or "B3" (letter column, number row)'),
       planting_id: z.string().optional().describe("Optional planting ID to link to"),
     },
     async ({ garden_id, category, content, square, planting_id }) => {
       const supabase = getClient();
 
-      // Verify garden exists
+      // Verify garden exists (and get size if we need to validate a square label)
       const { data: garden, error: gardenErr } = await supabase
         .from("gardens")
-        .select("id")
+        .select("id, size")
         .eq("id", garden_id)
         .single();
 
@@ -36,6 +40,16 @@ export function registerNoteTools(
         };
       }
 
+      // Validate and convert square label to integer if provided
+      let squareInt: number | null = null;
+      if (square) {
+        try {
+          squareInt = labelToSquare(square, garden.size);
+        } catch (e: any) {
+          return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
+        }
+      }
+
       const id = await generateId(supabase, "notes", "N");
 
       const { error } = await supabase.from("notes").insert({
@@ -43,7 +57,7 @@ export function registerNoteTools(
         garden_id,
         category,
         content,
-        square: square ?? null,
+        square: squareInt,
         planting_id: planting_id ?? null,
       });
 
@@ -52,7 +66,7 @@ export function registerNoteTools(
       }
 
       let text = `Note added (${id}, ${category})`;
-      if (square) text += ` for square ${square}`;
+      if (square) text += ` for ${square.toUpperCase()}`;
       if (planting_id) text += ` linked to planting ${planting_id}`;
       text += ".";
 

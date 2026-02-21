@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateId } from "../utils/ids.js";
-import { parseGridSize } from "../utils/grid.js";
+import { parseGridSize, colToLetter } from "../utils/grid.js";
 
 export function registerGardenTools(
   server: McpServer,
@@ -54,7 +54,7 @@ export function registerGardenTools(
           .eq("garden_id", garden.id)
           .not("phase", "in", '("transplanted","failed")');
 
-        // Build grid display
+        // Build grid display (cells hold 3-char plant abbreviation or "·")
         const grid: string[][] = Array.from({ length: rows }, () =>
           Array.from({ length: cols }, () => "·"),
         );
@@ -65,7 +65,22 @@ export function registerGardenTools(
           grid[row][col] = p.plant_name.substring(0, 3);
         }
 
-        const gridStr = grid.map((r) => r.map((c) => c.padEnd(4)).join("")).join("\n");
+        // Column header: "     A    B    C    D"
+        const colWidth = 5;
+        const rowLabelWidth = 3;
+        const headerCols = Array.from({ length: cols }, (_, i) =>
+          colToLetter(i + 1).padEnd(colWidth),
+        );
+        const header = " ".repeat(rowLabelWidth) + headerCols.join("");
+
+        // Each data row: " 1   Tom  ·    Car  ·"
+        const gridLines = grid.map((r, rowIdx) => {
+          const rowLabel = String(rowIdx + 1).padEnd(rowLabelWidth);
+          const cells = r.map((c) => c.padEnd(colWidth)).join("");
+          return rowLabel + cells;
+        });
+
+        const gridStr = [header, ...gridLines].join("\n");
 
         results.push(
           `## ${garden.name} (${garden.id})\n` +
