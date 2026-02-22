@@ -5,9 +5,9 @@ import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 
 const SUPABASE_URL = process.env.SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY!;
-const SUPABASE_JWKS_URL = process.env.SUPABASE_JWKS_URL!;
+const JWKS_URL = process.env.JWKS_URL!;
 
-const jwks = createRemoteJWKSet(new URL(SUPABASE_JWKS_URL));
+const jwks = createRemoteJWKSet(new URL(JWKS_URL));
 
 export const tokenVerifier: OAuthTokenVerifier = {
   async verifyAccessToken(token: string): Promise<AuthInfo> {

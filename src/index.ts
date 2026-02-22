@@ -55,6 +55,10 @@ app.use(
   }),
 );
 
+// Claude Code uses the MCP resource URL for OAuth discovery, producing path-suffixed
+// well-known URLs per RFC 8414. Serve metadata there so re-auth after token expiry works.
+app.get("/.well-known/oauth-authorization-server/mcp", (_req, res) => { res.json(oauthMetadata); });
+
 // Consent page
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
