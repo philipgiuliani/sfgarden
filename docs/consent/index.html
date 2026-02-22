@@ -147,12 +147,11 @@
           if (result.error) { showError(result.error.message); return; }
         }
 
-        var approve = await supabase.auth.oauth.approveAuthorization(authorizationId, { skipBrowserRedirect: true });
+        var approve = await supabase.auth.oauth.approveAuthorization(authorizationId);
         if (approve.error) { showError(approve.error.message); return; }
 
-        var redirectUrl = approve.data.redirect_url || approve.data.redirect_to;
-        if (redirectUrl) {
-          window.location.href = redirectUrl;
+        if (approve.data.redirect_to) {
+          window.location.href = approve.data.redirect_to;
         } else {
           showError('Approved but no redirect URL returned.');
         }
