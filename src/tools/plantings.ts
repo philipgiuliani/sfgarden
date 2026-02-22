@@ -34,10 +34,9 @@ export function registerPlantingTools(
     async ({ garden_id, squares, plant_name, variety, count, planted_at, notes }) => {
       const supabase = getClient();
 
-      // Get garden to validate coordinates
       const { data: garden, error: gardenErr } = await supabase
         .from("gardens")
-        .select("size")
+        .select("cols, rows")
         .eq("id", garden_id)
         .single();
 
@@ -45,15 +44,14 @@ export function registerPlantingTools(
         return { content: [{ type: "text", text: `Error: Garden ${garden_id} not found.` }], isError: true };
       }
 
-      // Normalise to uppercase and validate against grid bounds
       const labels = squares.map((s) => s.toUpperCase());
       try {
-        validateLabels(labels, garden.size);
+        validateLabels(labels, garden.cols, garden.rows);
       } catch (e: any) {
         return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
       }
 
-      // Check for conflicts (square column now stores text labels)
+      // Check for conflicts
       const { data: existing } = await supabase
         .from("plantings")
         .select("square, plant_name")
@@ -68,7 +66,6 @@ export function registerPlantingTools(
         }
       }
 
-      // Create plantings — store the label directly
       const created: string[] = [];
       for (const label of labels) {
         const id = await generateId(supabase, "plantings", "P");

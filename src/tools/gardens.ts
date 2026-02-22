@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateId } from "../utils/ids.js";
-import { parseGridSize, colToLetter, letterToCol } from "../utils/grid.js";
+import { colToLetter, letterToCol } from "../utils/grid.js";
 
 export function registerGardenTools(
   server: McpServer,
@@ -32,7 +32,7 @@ export function registerGardenTools(
 
       const results = [];
       for (const garden of gardens) {
-        const { cols, rows } = parseGridSize(garden.size);
+        const { cols, rows } = garden;
 
         const { data: activePlantings } = await supabase
           .from("plantings")
@@ -54,7 +54,7 @@ export function registerGardenTools(
           .eq("garden_id", garden.id)
           .not("phase", "in", '("transplanted","failed")');
 
-        // Build grid display — square column now stores text labels like "A1"
+        // Build grid display
         const grid: string[][] = Array.from({ length: rows }, () =>
           Array.from({ length: cols }, () => "·"),
         );
@@ -62,8 +62,8 @@ export function registerGardenTools(
         for (const p of activePlantings ?? []) {
           const match = (p.square as string)?.match(/^([A-Z]+)(\d+)$/i);
           if (!match) continue;
-          const colIdx = letterToCol(match[1]) - 1; // 0-indexed
-          const rowIdx = parseInt(match[2], 10) - 1; // 0-indexed
+          const colIdx = letterToCol(match[1]) - 1;
+          const rowIdx = parseInt(match[2], 10) - 1;
           if (rowIdx >= 0 && rowIdx < rows && colIdx >= 0 && colIdx < cols) {
             grid[rowIdx][colIdx] = p.plant_name.substring(0, 3);
           }
@@ -72,23 +72,19 @@ export function registerGardenTools(
         // Column header: "     A    B    C    D"
         const colWidth = 5;
         const rowLabelWidth = 3;
-        const headerCols = Array.from({ length: cols }, (_, i) =>
-          colToLetter(i + 1).padEnd(colWidth),
-        );
-        const header = " ".repeat(rowLabelWidth) + headerCols.join("");
+        const header =
+          " ".repeat(rowLabelWidth) +
+          Array.from({ length: cols }, (_, i) => colToLetter(i + 1).padEnd(colWidth)).join("");
 
-        // Each data row: " 1   Tom  ·    Car  ·"
-        const gridLines = grid.map((r, rowIdx) => {
-          const rowLabel = String(rowIdx + 1).padEnd(rowLabelWidth);
-          const cells = r.map((c) => c.padEnd(colWidth)).join("");
-          return rowLabel + cells;
-        });
+        const gridLines = grid.map((r, rowIdx) =>
+          String(rowIdx + 1).padEnd(rowLabelWidth) + r.map((c) => c.padEnd(colWidth)).join(""),
+        );
 
         const gridStr = [header, ...gridLines].join("\n");
 
         results.push(
           `## ${garden.name} (${garden.id})\n` +
-            `Size: ${garden.size} (${cols * rows} squares)\n` +
+            `Size: ${cols}x${rows} (${cols * rows} squares)\n` +
             (garden.notes ? `Notes: ${garden.notes}\n` : "") +
             `\n\`\`\`\n${gridStr}\n\`\`\`\n` +
             `Active plantings: ${activePlantings?.length ?? 0}\n` +
@@ -106,17 +102,12 @@ export function registerGardenTools(
     "Create a new square foot garden",
     {
       name: z.string().describe("Name of the garden"),
-      size: z
-        .string()
-        .regex(/^\d+x\d+$/)
-        .describe('Grid size in COLSxROWS format (e.g. "4x4", "3x6")'),
+      cols: z.number().int().positive().describe("Number of columns (X axis)"),
+      rows: z.number().int().positive().describe("Number of rows (Y axis)"),
       notes: z.string().optional().describe("Optional notes about the garden"),
     },
-    async ({ name, size, notes }) => {
+    async ({ name, cols, rows, notes }) => {
       const supabase = getClient();
-
-      // Validate size
-      parseGridSize(size);
 
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -129,7 +120,8 @@ export function registerGardenTools(
         id,
         user_id: user.id,
         name,
-        size,
+        cols,
+        rows,
         notes: notes ?? null,
       });
 
@@ -138,12 +130,7 @@ export function registerGardenTools(
       }
 
       return {
-        content: [
-          {
-            type: "text",
-            text: `Garden "${name}" created (${id}, ${size}).`,
-          },
-        ],
+        content: [{ type: "text", text: `Garden "${name}" created (${id}, ${cols}x${rows}).` }],
       };
     },
   );

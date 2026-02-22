@@ -26,10 +26,9 @@ export function registerNoteTools(
     async ({ garden_id, category, content, square, planting_id }) => {
       const supabase = getClient();
 
-      // Verify garden exists (and get size for coordinate validation)
       const { data: garden, error: gardenErr } = await supabase
         .from("gardens")
-        .select("id, size")
+        .select("id, cols, rows")
         .eq("id", garden_id)
         .single();
 
@@ -40,11 +39,10 @@ export function registerNoteTools(
         };
       }
 
-      // Validate coordinate label if provided
       const label = square ? square.toUpperCase() : null;
       if (label) {
         try {
-          validateLabels([label], garden.size);
+          validateLabels([label], garden.cols, garden.rows);
         } catch (e: any) {
           return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
         }
