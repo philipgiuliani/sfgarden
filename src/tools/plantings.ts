@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateId } from "../utils/ids.js";
 import { validateLabels } from "../utils/grid.js";
 
 export function registerPlantingTools(
@@ -68,9 +67,7 @@ export function registerPlantingTools(
 
       const created: string[] = [];
       for (const label of labels) {
-        const id = await generateId(supabase, "plantings", "P");
-        const { error } = await supabase.from("plantings").insert({
-          id,
+        const { data, error } = await supabase.from("plantings").insert({
           garden_id,
           square: label,
           plant_name,
@@ -78,12 +75,12 @@ export function registerPlantingTools(
           count: count ?? 1,
           planted_at: planted_at ?? new Date().toISOString().split("T")[0],
           notes: notes ?? null,
-        });
+        }).select("id").single();
 
         if (error) {
           return { content: [{ type: "text", text: `Error creating planting for ${label}: ${error.message}` }], isError: true };
         }
-        created.push(`${id} (${label})`);
+        created.push(`${data.id} (${label})`);
       }
 
       let text = `Created ${created.length} planting(s) of ${plant_name}:\n${created.join("\n")}`;

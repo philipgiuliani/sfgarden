@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateId } from "../utils/ids.js";
 
 export function registerHarvestTools(
   server: McpServer,
@@ -41,22 +40,19 @@ export function registerHarvestTools(
         };
       }
 
-      const id = await generateId(supabase, "harvests", "H");
-
-      const { error } = await supabase.from("harvests").insert({
-        id,
+      const { data, error } = await supabase.from("harvests").insert({
         planting_id,
         harvested_at: harvested_at ?? new Date().toISOString().split("T")[0],
         amount: amount ?? null,
         weight_grams: weight_grams ?? null,
         notes: notes ?? null,
-      });
+      }).select("id").single();
 
       if (error) {
         return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
       }
 
-      let text = `Harvest recorded (${id}) for ${planting.plant_name} (square ${planting.square}).`;
+      let text = `Harvest recorded (${data.id}) for ${planting.plant_name} (square ${planting.square}).`;
 
       if (mark_complete) {
         const { error: updateErr } = await supabase

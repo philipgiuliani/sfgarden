@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateId } from "../utils/ids.js";
 import { colToLetter, letterToCol } from "../utils/grid.js";
 
 export function registerGardenTools(
@@ -114,23 +113,20 @@ export function registerGardenTools(
         return { content: [{ type: "text", text: "Error: not authenticated" }], isError: true };
       }
 
-      const id = await generateId(supabase, "gardens", "G");
-
-      const { error } = await supabase.from("gardens").insert({
-        id,
+      const { data, error } = await supabase.from("gardens").insert({
         user_id: user.id,
         name,
         cols,
         rows,
         notes: notes ?? null,
-      });
+      }).select("id").single();
 
       if (error) {
         return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
       }
 
       return {
-        content: [{ type: "text", text: `Garden "${name}" created (${id}, ${cols}x${rows}).` }],
+        content: [{ type: "text", text: `Garden "${name}" created (${data.id}, ${cols}x${rows}).` }],
       };
     },
   );
