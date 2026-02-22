@@ -4,28 +4,23 @@ A Model Context Protocol (MCP) server for managing Square Foot Gardens. Connects
 
 ## Prerequisites
 
-- Node.js 18+
+- [Supabase CLI](https://supabase.com/docs/guides/cli)
 - A [Supabase](https://supabase.com) project
 
 ## Supabase Setup
 
 1. **Create a new Supabase project** at [supabase.com](https://supabase.com)
 
-2. **Run the database migration**:
-   - Go to the SQL Editor in your Supabase dashboard
-   - Paste and execute the contents of `supabase/migrations/001_initial_schema.sql`
+2. **Link and push the database schema**:
+   - `supabase link --project-ref <your-project-ref>`
+   - `supabase db push`
 
 3. **Enable OAuth 2.1 server** in Authentication > Settings:
    - Enable the OAuth 2.1 provider
-   - Set the authorization path to your deployed server's consent page (e.g., `https://your-server.com/consent`)
+   - Set the authorization path to your deployed consent page (for this repo, `docs/consent/index.html`, e.g. `https://<your-gh-pages-host>/sfgarden/consent/`)
 
-4. **Switch to asymmetric JWT signing (RS256)**:
-   - Go to Authentication > Settings > JWT
-   - Switch from HS256 to RS256
-   - Note the JWKS URL (typically `https://<project-ref>.supabase.co/auth/v1/.well-known/jwks.json`)
-
-5. **Configure site URL**:
-   - Set the site URL to your deployed server URL
+4. **Configure site URL**:
+   - Set the site URL to your deployed consent page origin (or your app origin if you have one)
 
 ## Environment Variables
 
@@ -33,38 +28,28 @@ A Model Context Protocol (MCP) server for managing Square Foot Gardens. Connects
 |----------|-------------|---------|
 | `SUPABASE_URL` | Your Supabase project URL | `https://xxx.supabase.co` |
 | `SUPABASE_ANON_KEY` | Supabase anon/public key | `eyJ...` |
-| `SUPABASE_JWKS_URL` | JWKS endpoint for JWT verification | `https://xxx.supabase.co/auth/v1/.well-known/jwks.json` |
-| `SERVER_URL` | Public URL of this server | `https://your-server.com` |
-| `PORT` | Port to listen on (default: 3000) | `3000` |
+| `SERVER_URL` | Optional public URL of the MCP edge function (defaults to `<SUPABASE_URL>/functions/v1/mcp`) | `https://xxx.supabase.co/functions/v1/mcp` |
 
 ## Local Development
 
 ```bash
-# Install dependencies
-npm install
-
 # Create .env file
 cp .env.example .env
-# Edit .env with your Supabase credentials
-
-# Build
-npm run build
-
-# Start
-npm start
-
-# Or watch for changes
-npm run dev
+# Edit .env with your Supabase credentials, then serve the edge function locally
+supabase functions serve mcp --env-file .env
 ```
 
 ## Deployment
 
-Build and deploy as any Node.js application. Ensure all environment variables are set.
+Deploy the MCP server as a Supabase Edge Function:
 
 ```bash
-npm run build
-npm start
+supabase functions deploy mcp --project-ref <your-project-ref>
 ```
+
+JWT verification is disabled for this function via `supabase/config.toml` (`[functions.mcp] verify_jwt = false`), so you don't need `--no-verify-jwt` on every command.
+
+This repository's GitHub Actions workflow (`.github/workflows/deploy.yml`) already runs `supabase db push` and deploys the `mcp` function on pushes to `main`.
 
 ## MCP Client Configuration
 
@@ -76,7 +61,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 {
   "mcpServers": {
     "sfgarden": {
-      "url": "https://your-server.com/mcp"
+      "url": "https://<project-ref>.supabase.co/functions/v1/mcp"
     }
   }
 }
@@ -85,7 +70,7 @@ Add to your Claude Desktop config (`~/Library/Application Support/Claude/claude_
 ### Claude Code
 
 ```bash
-claude mcp add sfgarden --transport http https://your-server.com/mcp
+claude mcp add sfgarden --transport http https://<project-ref>.supabase.co/functions/v1/mcp
 ```
 
 The client will automatically discover the OAuth flow via the protected resource metadata endpoint and prompt you to authenticate.
