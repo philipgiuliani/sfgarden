@@ -9,18 +9,18 @@ export function registerNoteTools(
 ) {
   server.tool(
     "sfg_add_note",
-    "Add a categorized note to a garden, optionally linked to a specific square or planting",
+    "Attach a categorized note to a garden. Use 'observation' for what you see (pests, growth, weather effects), 'task' for things to do, 'plan' for future planting ideas, 'issue' for problems needing attention, and 'general' for everything else. Optionally link a note to a specific square or planting for context.",
     {
-      garden_id: z.string().describe("Garden ID"),
+      garden_id: z.string().describe("ID of the garden this note belongs to"),
       category: z
         .enum(["observation", "task", "plan", "issue", "general"])
-        .describe("Note category"),
-      content: z.string().describe("Note content"),
+        .describe("observation = what you see, task = to-do, plan = future intent, issue = problem, general = other"),
+      content: z.string().describe("The note text — be as detailed as needed"),
       square: z
         .string()
         .optional()
-        .describe('Optional coordinate label, e.g. "A1" or "B3" (letter column, number row)'),
-      planting_id: z.string().optional().describe("Optional planting ID to link to"),
+        .describe("Optional grid coordinate to associate this note with, e.g. 'A1' or 'B3'"),
+      planting_id: z.string().optional().describe("Optional planting ID to associate this note with a specific planting"),
     },
     async ({ garden_id, category, content, square, planting_id }) => {
       const supabase = getClient();

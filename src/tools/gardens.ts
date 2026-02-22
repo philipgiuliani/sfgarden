@@ -9,7 +9,7 @@ export function registerGardenTools(
 ) {
   server.tool(
     "sfg_list_gardens",
-    "List all gardens with active plantings, harvest counts, and seedlings in progress",
+    "List all of the user's gardens. Returns each garden's name, ID, dimensions, an ASCII grid showing where active plantings are, and counts of active plantings, harvests, and in-progress seedlings. Call this before any other operation to discover garden IDs and current state.",
     {},
     async () => {
       const supabase = getClient();
@@ -98,12 +98,12 @@ export function registerGardenTools(
 
   server.tool(
     "sfg_create_garden",
-    "Create a new square foot garden",
+    "Create a new square foot garden with the given dimensions. Each square in the grid represents one square foot. A typical raised bed is 4×4 (cols=4, rows=4) or 4×8.",
     {
-      name: z.string().describe("Name of the garden"),
-      cols: z.number().int().positive().describe("Number of columns (X axis)"),
-      rows: z.number().int().positive().describe("Number of rows (Y axis)"),
-      notes: z.string().optional().describe("Optional notes about the garden"),
+      name: z.string().describe("A descriptive name for the garden, e.g. 'Back patio raised bed'"),
+      cols: z.number().int().positive().describe("Number of columns (the X axis, labeled A, B, C, …)"),
+      rows: z.number().int().positive().describe("Number of rows (the Y axis, labeled 1, 2, 3, …)"),
+      notes: z.string().optional().describe("Optional notes about location, sun exposure, soil type, etc."),
     },
     async ({ name, cols, rows, notes }) => {
       const supabase = getClient();

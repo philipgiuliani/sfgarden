@@ -212,7 +212,29 @@ app.post(
       // Create MCP server for this request
       const server = new McpServer(
         { name: "sfg-mcp-server", version: "1.0.0" },
-        { capabilities: { tools: {} } },
+        {
+          capabilities: { tools: {} },
+          instructions: [
+            "You are helping a user manage their square foot gardens.",
+            "",
+            "## Coordinate system",
+            "Gardens use an alphanumeric grid: columns are letters (A, B, C, …) and rows are numbers (1, 2, 3, …).",
+            'For example, "B3" means column B, row 3. A 4×4 garden spans A–D columns and 1–4 rows.',
+            "",
+            "## Typical workflows",
+            "1. **List first.** Always call sfg_list_gardens before performing operations so you know garden IDs, dimensions, and what is already planted.",
+            "2. **Planting directly.** When the user wants to plant something in a garden, use sfg_add_planting with the garden ID and one or more square coordinates.",
+            "3. **Starting from seed.** When the user is starting seeds indoors, use sfg_start_seedlings (seedlings are user-level, not tied to a garden). Then advance through phases with sfg_advance_seedling_phase: sown → germinated → true_leaves → hardening → transplanted. When transplanting, first create the planting with sfg_add_planting, then advance the seedling to 'transplanted' and link it to that planting ID.",
+            "4. **Harvesting.** Use sfg_record_harvest to log each harvest event. Set mark_complete to true only when the plant is fully done producing.",
+            "5. **Notes.** Use sfg_add_note to record observations, tasks, plans, or issues. Link notes to a specific square or planting when relevant.",
+            "",
+            "## Important rules",
+            "- Do not guess garden IDs or planting IDs — always retrieve them first.",
+            "- A single square can have multiple plantings (e.g. succession planting), but the tool will warn about conflicts with active plantings.",
+            "- Seedlings and plantings are separate concepts: seedlings track indoor growth, plantings track what is in the garden.",
+            "- sfg_get_all_data returns raw JSON of all tables — use it for analytics, summaries, or when you need to cross-reference data.",
+          ].join("\n"),
+        },
       );
 
       const getClient = () => supabase;

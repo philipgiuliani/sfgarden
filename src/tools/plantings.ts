@@ -9,26 +9,26 @@ export function registerPlantingTools(
 ) {
   server.tool(
     "sfg_add_planting",
-    "Add planting(s) to square(s) in a garden. Warns about conflicts with existing active plantings.",
+    "Plant something in one or more squares of a garden. Use this both for direct planting and for placing transplanted seedlings. If a square already has an active planting, the tool will warn about the conflict but still create the new planting (for succession planting). Call sfg_list_gardens first to get the garden ID and see which squares are available.",
     {
-      garden_id: z.string().describe("Garden ID"),
+      garden_id: z.string().describe("ID of the garden to plant in (from sfg_list_gardens)"),
       squares: z
         .array(z.string())
         .min(1)
-        .describe('Coordinates to plant in, e.g. ["A1", "B2", "C3"]. Column is a letter (X), row is a number (Y).'),
-      plant_name: z.string().describe("Name of the plant"),
-      variety: z.string().optional().describe("Plant variety"),
+        .describe('One or more grid coordinates, e.g. ["A1", "B2"]. Letters are columns, numbers are rows.'),
+      plant_name: z.string().describe("Common name of the plant, e.g. 'Tomato', 'Basil', 'Lettuce'"),
+      variety: z.string().optional().describe("Specific variety, e.g. 'Roma', 'Genovese', 'Buttercrunch'"),
       count: z
         .number()
         .int()
         .positive()
         .optional()
-        .describe("Number of plants per square (default 1)"),
+        .describe("Number of plants per square — in square foot gardening this depends on plant spacing (default 1)"),
       planted_at: z
         .string()
         .optional()
-        .describe("Planting date (YYYY-MM-DD, default today)"),
-      notes: z.string().optional().describe("Optional notes"),
+        .describe("Date the planting went into the garden (YYYY-MM-DD, defaults to today)"),
+      notes: z.string().optional().describe("Freeform notes about this planting"),
     },
     async ({ garden_id, squares, plant_name, variety, count, planted_at, notes }) => {
       const supabase = getClient();
@@ -94,10 +94,10 @@ export function registerPlantingTools(
 
   server.tool(
     "sfg_update_planting_status",
-    "Update the status of a planting to active, harvested, or failed",
+    "Change the status of an existing planting. Use 'harvested' when a plant is completely done producing, or 'failed' if it died or was removed. Prefer sfg_record_harvest with mark_complete=true over calling this directly when recording a final harvest.",
     {
-      planting_id: z.string().describe("Planting ID"),
-      status: z.enum(["active", "harvested", "failed"]).describe("New status"),
+      planting_id: z.string().describe("ID of the planting to update"),
+      status: z.enum(["active", "harvested", "failed"]).describe("New status: 'active' (growing), 'harvested' (done producing), or 'failed' (died/removed)"),
     },
     async ({ planting_id, status }) => {
       const supabase = getClient();

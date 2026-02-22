@@ -8,20 +8,20 @@ export function registerHarvestTools(
 ) {
   server.tool(
     "sfg_record_harvest",
-    "Record a harvest for a planting, optionally marking the planting as fully harvested",
+    "Log a harvest event for a planting. A single planting can have many harvests over time (e.g. picking tomatoes weekly). Set mark_complete to true only when the plant is fully done producing and the square is ready to be replanted.",
     {
-      planting_id: z.string().describe("Planting ID"),
-      amount: z.string().optional().describe('Amount harvested (e.g. "6 tomatoes", "2 lbs")'),
-      weight_grams: z.number().optional().describe("Weight in grams"),
+      planting_id: z.string().describe("ID of the planting being harvested"),
+      amount: z.string().optional().describe("Human-readable description of the yield, e.g. '6 tomatoes', '2 lbs', '1 large zucchini'"),
+      weight_grams: z.number().optional().describe("Weight of the harvest in grams, for tracking total yield over time"),
       harvested_at: z
         .string()
         .optional()
-        .describe("Harvest date (YYYY-MM-DD, default today)"),
-      notes: z.string().optional().describe("Optional notes"),
+        .describe("Date of the harvest (YYYY-MM-DD, defaults to today)"),
+      notes: z.string().optional().describe("Observations about quality, ripeness, pest damage, etc."),
       mark_complete: z
         .boolean()
         .optional()
-        .describe("Set planting status to 'harvested' (default false)"),
+        .describe("If true, also sets the planting status to 'harvested' (defaults to false — use for the final harvest only)"),
     },
     async ({ planting_id, amount, weight_grams, harvested_at, notes, mark_complete }) => {
       const supabase = getClient();

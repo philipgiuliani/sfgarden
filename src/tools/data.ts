@@ -7,7 +7,7 @@ export function registerDataTools(
 ) {
   server.tool(
     "sfg_get_all_data",
-    "Return all raw data across all gardens for analytics: plantings, harvests, seedlings, and notes",
+    "Export all of the user's data as raw JSON: gardens, plantings, harvests, seedlings, and notes. Use this when you need to analyze trends (e.g. total yield, planting history), answer questions that span multiple gardens, or cross-reference records. The response can be large — prefer the other tools for simple lookups.",
     {},
     async () => {
       const supabase = getClient();
