@@ -147,11 +147,23 @@
           if (result.error) { showError(result.error.message); return; }
         }
 
-        var approve = await supabase.auth.oauth.approveAuthorization(authorizationId);
+        var details = await supabase.auth.oauth.getAuthorizationDetails(authorizationId);
+        if (details.error) { showError(details.error.message); return; }
+
+        var detailsRedirect = details.data && (details.data.redirect_url || details.data.redirect_to);
+        if (detailsRedirect) {
+          window.location.href = detailsRedirect;
+          return;
+        }
+
+        var approve = await supabase.auth.oauth.approveAuthorization(authorizationId, {
+          skipBrowserRedirect: true
+        });
         if (approve.error) { showError(approve.error.message); return; }
 
-        if (approve.data.redirect_to) {
-          window.location.href = approve.data.redirect_to;
+        var approveRedirect = approve.data && (approve.data.redirect_url || approve.data.redirect_to);
+        if (approveRedirect) {
+          window.location.href = approveRedirect;
         } else {
           showError('Approved but no redirect URL returned.');
         }
