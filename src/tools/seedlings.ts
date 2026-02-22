@@ -10,13 +10,13 @@ export function registerSeedlingTools(
 ) {
   server.tool(
     "sfg_start_seedlings",
-    "Start a new seedling tray (not tied to a specific garden — seedlings live in trays until transplanted)",
+    "Record starting seeds indoors. Seedlings belong to the user, not a specific garden — they only become linked to a garden square when transplanted via sfg_advance_seedling_phase. Use this when the user is starting seeds in trays, pots, or cells before moving them outside.",
     {
-      plant_name: z.string().describe("Name of the plant"),
-      variety: z.string().optional().describe("Plant variety"),
-      count: z.number().int().positive().optional().describe("Number of seeds/cells (default 1)"),
-      sown_at: z.string().optional().describe("Sowing date (YYYY-MM-DD, default today)"),
-      notes: z.string().optional().describe("Optional notes"),
+      plant_name: z.string().describe("Common name of the plant, e.g. 'Tomato', 'Pepper'"),
+      variety: z.string().optional().describe("Specific variety, e.g. 'San Marzano', 'Jalapeño'"),
+      count: z.number().int().positive().optional().describe("Number of seeds or cells being started (default 1)"),
+      sown_at: z.string().optional().describe("Date seeds were sown (YYYY-MM-DD, defaults to today)"),
+      notes: z.string().optional().describe("Seed source, soil mix used, location of tray, etc."),
     },
     async ({ plant_name, variety, count, sown_at, notes }) => {
       const supabase = getClient();
@@ -55,17 +55,17 @@ export function registerSeedlingTools(
 
   server.tool(
     "sfg_advance_seedling_phase",
-    "Advance a seedling to the next lifecycle phase: sown → germinated → true_leaves → hardening → transplanted. Or mark as failed.",
+    "Move a seedling forward in its lifecycle. Phases must progress in order: sown → germinated → true_leaves → hardening → transplanted. A seedling can be marked 'failed' from any phase. When transplanting, first create the planting with sfg_add_planting, then call this tool with phase='transplanted' and pass the new planting_id to link them.",
     {
-      seedling_id: z.string().describe("Seedling ID"),
+      seedling_id: z.string().describe("ID of the seedling to advance"),
       phase: z
         .enum(PHASES)
-        .describe("Target phase"),
+        .describe("Target phase — must be later than the current phase (or 'failed' from any phase)"),
       planting_id: z
         .string()
         .optional()
-        .describe("If transplanting, the planting ID to link to"),
-      date: z.string().optional().describe("Phase change date (YYYY-MM-DD, default today)"),
+        .describe("Required when phase is 'transplanted': the planting ID (from sfg_add_planting) to link the seedling to its garden square"),
+      date: z.string().optional().describe("Date the phase change occurred (YYYY-MM-DD, defaults to today)"),
     },
     async ({ seedling_id, phase, planting_id, date }) => {
       const supabase = getClient();
