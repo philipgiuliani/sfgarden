@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateId } from "../utils/ids.js";
 import { validateLabels } from "../utils/grid.js";
 
 export function registerNoteTools(
@@ -48,22 +47,19 @@ export function registerNoteTools(
         }
       }
 
-      const id = await generateId(supabase, "notes", "N");
-
-      const { error } = await supabase.from("notes").insert({
-        id,
+      const { data, error } = await supabase.from("notes").insert({
         garden_id,
         category,
         content,
         square: label,
         planting_id: planting_id ?? null,
-      });
+      }).select("id").single();
 
       if (error) {
         return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
       }
 
-      let text = `Note added (${id}, ${category})`;
+      let text = `Note added (${data.id}, ${category})`;
       if (label) text += ` for ${label}`;
       if (planting_id) text += ` linked to planting ${planting_id}`;
       text += ".";

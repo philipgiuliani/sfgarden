@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { generateId } from "../utils/ids.js";
 
 const PHASES = ["sown", "germinated", "true_leaves", "hardening", "transplanted", "failed"] as const;
 
@@ -27,11 +26,9 @@ export function registerSeedlingTools(
         return { content: [{ type: "text", text: "Error: Could not resolve current user." }], isError: true };
       }
 
-      const id = await generateId(supabase, "seedlings", "S");
       const date = sown_at ?? new Date().toISOString().split("T")[0];
 
-      const { error } = await supabase.from("seedlings").insert({
-        id,
+      const { data, error } = await supabase.from("seedlings").insert({
         user_id: user.id,
         plant_name,
         variety: variety ?? null,
@@ -39,7 +36,7 @@ export function registerSeedlingTools(
         sown_at: date,
         phase_changed_at: date,
         notes: notes ?? null,
-      });
+      }).select("id").single();
 
       if (error) {
         return { content: [{ type: "text", text: `Error: ${error.message}` }], isError: true };
@@ -49,7 +46,7 @@ export function registerSeedlingTools(
         content: [
           {
             type: "text",
-            text: `Seedling tray started (${id}): ${count ?? 1}x ${plant_name}${variety ? ` (${variety})` : ""}, sown ${date}.`,
+            text: `Seedling tray started (${data.id}): ${count ?? 1}x ${plant_name}${variety ? ` (${variety})` : ""}, sown ${date}.`,
           },
         ],
       };
