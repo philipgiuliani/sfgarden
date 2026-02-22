@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateId } from "../utils/ids.js";
-import { validateSquares, totalSquares } from "../utils/grid.js";
+import { validateLabels } from "../utils/grid.js";
 
 export function registerPlantingTools(
   server: McpServer,
@@ -14,9 +14,9 @@ export function registerPlantingTools(
     {
       garden_id: z.string().describe("Garden ID"),
       squares: z
-        .array(z.number().int().positive())
+        .array(z.string())
         .min(1)
-        .describe("Square numbers to plant in"),
+        .describe('Coordinates to plant in, e.g. ["A1", "B2", "C3"]. Column is a letter (X), row is a number (Y).'),
       plant_name: z.string().describe("Name of the plant"),
       variety: z.string().optional().describe("Plant variety"),
       count: z
@@ -34,10 +34,9 @@ export function registerPlantingTools(
     async ({ garden_id, squares, plant_name, variety, count, planted_at, notes }) => {
       const supabase = getClient();
 
-      // Get garden to validate squares
       const { data: garden, error: gardenErr } = await supabase
         .from("gardens")
-        .select("size")
+        .select("cols, rows")
         .eq("id", garden_id)
         .single();
 
@@ -45,8 +44,9 @@ export function registerPlantingTools(
         return { content: [{ type: "text", text: `Error: Garden ${garden_id} not found.` }], isError: true };
       }
 
+      const labels = squares.map((s) => s.toUpperCase());
       try {
-        validateSquares(squares, garden.size);
+        validateLabels(labels, garden.cols, garden.rows);
       } catch (e: any) {
         return { content: [{ type: "text", text: `Error: ${e.message}` }], isError: true };
       }
@@ -57,25 +57,22 @@ export function registerPlantingTools(
         .select("square, plant_name")
         .eq("garden_id", garden_id)
         .eq("status", "active")
-        .in("square", squares);
+        .in("square", labels);
 
       const warnings: string[] = [];
       if (existing && existing.length > 0) {
         for (const e of existing) {
-          warnings.push(
-            `Square ${e.square} already has active planting: ${e.plant_name}`,
-          );
+          warnings.push(`${e.square} already has active planting: ${e.plant_name}`);
         }
       }
 
-      // Create plantings
       const created: string[] = [];
-      for (const sq of squares) {
+      for (const label of labels) {
         const id = await generateId(supabase, "plantings", "P");
         const { error } = await supabase.from("plantings").insert({
           id,
           garden_id,
-          square: sq,
+          square: label,
           plant_name,
           variety: variety ?? null,
           count: count ?? 1,
@@ -84,9 +81,9 @@ export function registerPlantingTools(
         });
 
         if (error) {
-          return { content: [{ type: "text", text: `Error creating planting for square ${sq}: ${error.message}` }], isError: true };
+          return { content: [{ type: "text", text: `Error creating planting for ${label}: ${error.message}` }], isError: true };
         }
-        created.push(`${id} (square ${sq})`);
+        created.push(`${id} (${label})`);
       }
 
       let text = `Created ${created.length} planting(s) of ${plant_name}:\n${created.join("\n")}`;
@@ -126,7 +123,7 @@ export function registerPlantingTools(
         content: [
           {
             type: "text",
-            text: `Planting ${data.id} (${data.plant_name}, square ${data.square}) status set to "${status}".`,
+            text: `Planting ${data.id} (${data.plant_name}, ${data.square}) status set to "${status}".`,
           },
         ],
       };
