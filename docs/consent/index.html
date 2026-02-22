@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authorize - Square Foot Garden</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f0;
+      color: #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+      padding: 2rem;
+      max-width: 420px;
+      width: 100%;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .subtitle { color: #666; margin-bottom: 1.5rem; }
+    .scopes {
+      background: #f9f9f6;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .scopes h3 { font-size: 0.875rem; color: #666; margin-bottom: 0.5rem; }
+    .scopes ul { list-style: none; padding: 0; }
+    .scopes li { padding: 0.25rem 0; }
+    .scopes li::before { content: "\2713 "; color: #4a7c59; }
+    label { display: block; margin-bottom: 0.25rem; font-size: 0.875rem; color: #555; }
+    input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    input:focus { outline: none; border-color: #4a7c59; }
+    button {
+      width: 100%;
+      padding: 0.75rem;
+      background: #4a7c59;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    button:hover { opacity: 0.9; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .error { color: #c53030; margin-top: 1rem; font-size: 0.9rem; display: none; }
+    .toggle { text-align: center; margin-top: 0.75rem; font-size: 0.875rem; color: #666; }
+    .toggle a { color: #4a7c59; text-decoration: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Square Foot Garden</h1>
+    <p class="subtitle">Sign in to authorize access to your garden data.</p>
+
+    <div class="scopes">
+      <h3>This will allow the application to:</h3>
+      <ul>
+        <li>View your gardens and plantings</li>
+        <li>Add and update plantings</li>
+        <li>Record harvests</li>
+        <li>Manage seedlings and notes</li>
+      </ul>
+    </div>
+
+    <form id="authForm">
+      <label for="email">Email</label>
+      <input type="email" id="email" required placeholder="you@example.com">
+      <label for="password">Password</label>
+      <input type="password" id="password" required placeholder="Your password">
+      <button type="submit" id="submitBtn">Sign in &amp; Approve</button>
+    </form>
+
+    <p class="toggle" id="toggleLink">
+      Don't have an account? <a id="toggleAction">Sign up</a>
+    </p>
+
+    <p class="error" id="error"></p>
+  </div>
+
+  <script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script>
+    var SUPABASE_URL = 'https://peldcanblxfsmhwqsmas.supabase.co';
+    var SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlbGRjYW5ibHhmc21od3FzbWFzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE2MTQzOTYsImV4cCI6MjA4NzE5MDM5Nn0.GXCmQ4UFRL-SKUO-6kDvMCky6WdtX8fmoReXjkGi7o4';
+
+    var params = new URLSearchParams(window.location.search);
+    var authorizationId = params.get('authorization_id');
+
+    if (!authorizationId) {
+      showError('Missing authorization_id parameter.');
+    }
+
+    var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    var isSignup = false;
+
+    document.getElementById('toggleAction').addEventListener('click', function() {
+      isSignup = !isSignup;
+      var btn = document.getElementById('submitBtn');
+      var link = document.getElementById('toggleLink');
+      if (isSignup) {
+        btn.textContent = 'Sign up & Approve';
+        link.innerHTML = 'Already have an account? <a id="toggleAction">Sign in</a>';
+      } else {
+        btn.textContent = 'Sign in & Approve';
+        link.innerHTML = "Don't have an account? <a id=\"toggleAction\">Sign up</a>";
+      }
+      document.getElementById('toggleAction').addEventListener('click', arguments.callee);
+    });
+
+    document.getElementById('authForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      hideError();
+
+      var email = document.getElementById('email').value;
+      var password = document.getElementById('password').value;
+      var btn = document.getElementById('submitBtn');
+
+      btn.disabled = true;
+      btn.textContent = 'Please wait...';
+
+      try {
+        if (isSignup) {
+          var result = await supabase.auth.signUp({ email: email, password: password });
+          if (result.error) { showError(result.error.message); return; }
+          if (!result.data.session) {
+            showError('Account created! Check your email to confirm, then sign in.');
+            isSignup = false;
+            return;
+          }
+        } else {
+          var result = await supabase.auth.signInWithPassword({ email: email, password: password });
+          if (result.error) { showError(result.error.message); return; }
+        }
+
+        var approve = await supabase.auth.oauth.approveAuthorization(authorizationId, { skipBrowserRedirect: true });
+        if (approve.error) { showError(approve.error.message); return; }
+
+        var redirectUrl = approve.data.redirect_url || approve.data.redirect_to;
+        if (redirectUrl) {
+          window.location.href = redirectUrl;
+        } else {
+          showError('Approved but no redirect URL returned.');
+        }
+      } catch (err) {
+        showError(err.message || 'Something went wrong.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = isSignup ? 'Sign up & Approve' : 'Sign in & Approve';
+      }
+    });
+
+    function showError(msg) {
+      var el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function hideError() {
+      document.getElementById('error').style.display = 'none';
+    }
+  </script>
+</body>
+</html>

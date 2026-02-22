@@ -2,7 +2,7 @@
   "mcpServers": {
     "sfgarden": {
       "type": "http",
-      "url": "http://localhost:3000/mcp"
+      "url": "https://peldcanblxfsmhwqsmas.supabase.co/functions/v1/mcp"
     },
     "supabase": {
       "type": "http",
