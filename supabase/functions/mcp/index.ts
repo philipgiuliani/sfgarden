@@ -272,7 +272,7 @@ app.post("/", async (c) => {
   const {
     data: { user },
     error: userErr,
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser(token);
 
   if (userErr || !user) {
     return c.text("Unauthorized", 401, {
