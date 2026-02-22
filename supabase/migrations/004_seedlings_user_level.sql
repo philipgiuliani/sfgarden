@@ -14,11 +14,11 @@ where seedlings.garden_id = gardens.id;
 -- Make it required
 alter table seedlings alter column user_id set not null;
 
+-- Drop the old RLS policy (references garden_id, must happen before column drop)
+drop policy "Users can manage seedlings in their gardens" on seedlings;
+
 -- Drop the now-redundant garden_id
 alter table seedlings drop column garden_id;
-
--- Replace RLS policy
-drop policy "Users can manage seedlings in their gardens" on seedlings;
 
 create policy "Users can manage their own seedlings"
   on seedlings for all
