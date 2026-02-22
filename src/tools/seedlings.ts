@@ -11,30 +11,20 @@ export function registerSeedlingTools(
 ) {
   server.tool(
     "sfg_start_seedlings",
-    "Start a new seedling tray for a garden",
+    "Start a new seedling tray (not tied to a specific garden — seedlings live in trays until transplanted)",
     {
-      garden_id: z.string().describe("Garden ID"),
       plant_name: z.string().describe("Name of the plant"),
       variety: z.string().optional().describe("Plant variety"),
       count: z.number().int().positive().optional().describe("Number of seeds/cells (default 1)"),
       sown_at: z.string().optional().describe("Sowing date (YYYY-MM-DD, default today)"),
       notes: z.string().optional().describe("Optional notes"),
     },
-    async ({ garden_id, plant_name, variety, count, sown_at, notes }) => {
+    async ({ plant_name, variety, count, sown_at, notes }) => {
       const supabase = getClient();
 
-      // Verify garden exists
-      const { data: garden, error: gardenErr } = await supabase
-        .from("gardens")
-        .select("id")
-        .eq("id", garden_id)
-        .single();
-
-      if (gardenErr || !garden) {
-        return {
-          content: [{ type: "text", text: `Error: Garden ${garden_id} not found.` }],
-          isError: true,
-        };
+      const { data: { user }, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !user) {
+        return { content: [{ type: "text", text: "Error: Could not resolve current user." }], isError: true };
       }
 
       const id = await generateId(supabase, "seedlings", "S");
@@ -42,7 +32,7 @@ export function registerSeedlingTools(
 
       const { error } = await supabase.from("seedlings").insert({
         id,
-        garden_id,
+        user_id: user.id,
         plant_name,
         variety: variety ?? null,
         count: count ?? 1,
