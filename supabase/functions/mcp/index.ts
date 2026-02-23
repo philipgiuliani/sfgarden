@@ -22,42 +22,7 @@ const CORS_HEADERS = {
 };
 
 // ── MCP instructions ────────────────────────────────────────────────────────
-const STATIC_INSTRUCTIONS = `You are helping a user manage their square foot gardens.
-
-## Coordinate System
-
-Gardens use an alphanumeric grid: columns are letters (A, B, C, …) and rows are numbers (1, 2, 3, …).
-For example, "B3" means column B, row 3. A 4×4 garden spans columns A–D and rows 1–4.
-
-## Writing Data (INSERT / UPDATE / DELETE)
-
-The execute_sql tool returns a JSON array from a SELECT. For write operations, wrap them in a CTE so results are returned:
-
-\`\`\`sql
-WITH new_row AS (
-  INSERT INTO plantings (garden_id, square, plant_name, variety, count, planted_at)
-  VALUES ('...', 'A1', 'Tomato', 'Roma', 1, CURRENT_DATE)
-  RETURNING *
-)
-SELECT * FROM new_row
-\`\`\`
-
-For updates:
-\`\`\`sql
-WITH updated AS (
-  UPDATE plantings SET status = 'harvested' WHERE id = '...' RETURNING *
-)
-SELECT * FROM updated
-\`\`\`
-
-## Important Rules
-
-- Use \`auth.uid()\` when inserting into tables with a \`user_id\` column (gardens, seedlings).
-- IDs are auto-generated UUIDs — do NOT fabricate IDs, just omit the \`id\` column on INSERT.
-- Seedling phases must progress in order: sown → germinated → true_leaves → hardening → transplanted. A seedling can be marked 'failed' from any phase.
-- When transplanting a seedling, first create the planting, then update the seedling's phase and planting_id.
-- A single square can have multiple plantings (succession planting).
-- Seedlings and plantings are separate concepts: seedlings track indoor growth, plantings track what is in the garden.`;
+const STATIC_INSTRUCTIONS = `You are helping a user manage their square foot gardens. Always call get_schema before writing SQL queries to discover the database structure, rules, and query patterns.`;
 
 // ── Schema introspection ────────────────────────────────────────────────────
 
@@ -232,8 +197,39 @@ async function fetchSchemaInstructions(
     checksRes.data as CheckConstraint[],
   );
 
-  cachedSchema =
-    `${STATIC_INSTRUCTIONS}\n\n## Database Schema\n\nAll tables have Row Level Security — queries automatically filter to the authenticated user's data.\n\n${schemaMarkdown}`;
+  cachedSchema = `## Row Level Security
+
+All tables have RLS enabled. Queries are automatically scoped to the authenticated user — you NEVER need to filter by user_id in SELECT/UPDATE/DELETE queries. For INSERTs into tables with a \`user_id\` column (gardens, seedlings), use \`auth.uid()\`.
+
+## Coordinate System
+
+Gardens use an alphanumeric grid: columns are letters (A, B, C, …) and rows are numbers (1, 2, 3, …).
+For example, "B3" means column B, row 3. A 4×4 garden spans columns A–D and rows 1–4.
+
+## Writing Data (INSERT / UPDATE / DELETE)
+
+For write operations, wrap them in a CTE so results are returned:
+
+\`\`\`sql
+WITH new_row AS (
+  INSERT INTO plantings (garden_id, square, plant_name, variety, count, planted_at)
+  VALUES ('...', 'A1', 'Tomato', 'Roma', 1, CURRENT_DATE)
+  RETURNING *
+)
+SELECT * FROM new_row
+\`\`\`
+
+## Important Rules
+
+- IDs are auto-generated UUIDs — do NOT fabricate IDs, just omit the \`id\` column on INSERT.
+- Seedling phases must progress in order: sown → germinated → true_leaves → hardening → transplanted. A seedling can be marked 'failed' from any phase.
+- When transplanting a seedling, first create the planting, then update the seedling's phase and planting_id.
+- A single square can have multiple plantings (succession planting).
+- Seedlings and plantings are separate concepts: seedlings track indoor growth, plantings track what is in the garden.
+
+## Database Schema
+
+${schemaMarkdown}`;
   return cachedSchema;
 }
 
@@ -251,8 +247,20 @@ function createMcpServer(
   );
 
   server.tool(
+    "get_schema",
+    "Get the database schema for the Square Foot Garden database. Call this FIRST before writing any SQL queries to discover available tables, columns, types, and constraints.",
+    {},
+    async () => {
+      const schema = await fetchSchemaInstructions(supabase);
+      return {
+        content: [{ type: "text" as const, text: schema }],
+      };
+    },
+  );
+
+  server.tool(
     "execute_sql",
-    "Execute a SQL query against the Square Foot Garden database. Returns a JSON array of rows. For writes (INSERT/UPDATE/DELETE), use a CTE with RETURNING to get results back. RLS is enforced — only the authenticated user's data is accessible.",
+    "Execute a SQL query against the Square Foot Garden database. Returns a JSON array of rows. For writes (INSERT/UPDATE/DELETE), use a CTE with RETURNING to get results back. RLS is enforced — only the authenticated user's data is accessible. IMPORTANT: Call get_schema first if you don't know the table structure.",
     {
       query: z.string().describe("The SQL query to execute"),
     },

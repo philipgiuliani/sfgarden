@@ -79,12 +79,10 @@ The client will automatically discover the OAuth flow via the protected resource
 
 | Tool | Description |
 |------|-------------|
-| `sfg_list_gardens` | List all gardens with grid visualization, active plantings, and stats |
-| `sfg_create_garden` | Create a new square foot garden |
-| `sfg_add_planting` | Add planting(s) to square(s) with conflict detection |
-| `sfg_update_planting_status` | Update planting status (active/harvested/failed) |
-| `sfg_record_harvest` | Record a harvest with optional planting completion |
-| `sfg_start_seedlings` | Start a new seedling tray |
-| `sfg_advance_seedling_phase` | Advance seedling through lifecycle phases |
-| `sfg_add_note` | Add a categorized note to a garden/square/planting |
-| `sfg_get_all_data` | Export all raw data for analytics |
+| `execute_sql` | Execute any SQL query against the database. RLS is enforced — only the authenticated user's data is accessible. For writes (INSERT/UPDATE/DELETE), use a CTE with RETURNING to get results back. |
+
+## Architecture
+
+The MCP server dynamically generates its schema documentation from the database's `information_schema` and `pg_constraint` catalog on first request (cached for the lifetime of the edge function). This means the database migrations are the single source of truth — no manual schema updates needed in the MCP instructions.
+
+The Claude Code skill (`.claude/skills/sfgarden/`) provides behavioral guidance (emoji grids, seedling nudges, language preferences) while the MCP server's instructions handle schema, coordinate system, and SQL patterns.

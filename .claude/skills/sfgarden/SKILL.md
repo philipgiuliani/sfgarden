@@ -37,17 +37,21 @@ When asked to show a garden, query active plantings and render an emoji grid:
 | Radieschen / Radish | 🌸 |
 | Sellerie / Celery | 🌾 |
 
-Format:
+Format (Markdown-Tabelle mit Koordinaten):
 ```
 🌱 Hochbeet N (4×7 = 28 Felder)
 
-        Sp.A          Sp.B          Sp.C          Sp.D
- R1 [ 🍅 Tomaten ] [ 🥕 Karotten] [    frei    ] [ 🥗 Salat   ]
- R2 [ 🍅 Tomaten ] [ 🥕 Karotten] [ 🟢 Zucchini] [ 🥗 Salat   ]
- ...
+|   | A            | B            | C            | D          |
+|---|--------------|--------------|--------------|------------|
+| 1 | 🍅 Tomaten   | 🥕 Karotten  |              | 🥗 Salat   |
+| 2 | 🍅 Tomaten   | 🥕 Karotten  | 🟢 Zucchini  | 🥗 Salat   |
+| 3 |              |              |              |            |
+| … |              |              |              |            |
 
 📊 8/28 Felder belegt · 6 Kulturen · letzte Pflanzung vor 2 Tagen
 ```
+
+Leere Felder bleiben leer (kein Platzhaltertext).
 
 ## Proactive Overview
 

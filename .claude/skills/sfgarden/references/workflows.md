@@ -204,12 +204,13 @@ Claude: [Finds planting, inserts harvest + note]
 ### Garden Layout
 ```
 User: "Zeig mir Hochbeet N"
-Claude: [Queries active plantings, renders emoji grid]
+Claude: [Queries active plantings, renders markdown table]
         "🌱 Hochbeet N (4×7 = 28 Felder)
 
-              Sp.A          Sp.B          Sp.C          Sp.D
-         R1 [ 🍅 Tomaten ] [ 🥕 Karotten] [    frei    ] [ 🥗 Salat   ]
-         ...
+        |   | A          | B           | C           | D         |
+        |---|------------|-------------|-------------|-----------|
+        | 1 | 🍅 Tomaten | 🥕 Karotten |             | 🥗 Salat  |
+        | … |            |             |             |           |
 
         📊 8/28 Felder belegt · 6 Kulturen"
 ```
