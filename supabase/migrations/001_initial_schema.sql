@@ -14,8 +14,7 @@ alter table gardens enable row level security;
 
 create policy "Users can manage their own gardens"
   on gardens for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (auth.uid() = user_id);
 
 -- Plantings
 create table plantings (
@@ -35,8 +34,7 @@ alter table plantings enable row level security;
 
 create policy "Users can manage plantings in their gardens"
   on plantings for all
-  using (exists (select 1 from gardens where gardens.id = plantings.garden_id and gardens.user_id = auth.uid()))
-  with check (exists (select 1 from gardens where gardens.id = plantings.garden_id and gardens.user_id = auth.uid()));
+  using (exists (select 1 from gardens where gardens.id = plantings.garden_id and gardens.user_id = auth.uid()));
 
 -- Harvests
 create table harvests (
@@ -54,11 +52,6 @@ alter table harvests enable row level security;
 create policy "Users can manage harvests for their plantings"
   on harvests for all
   using (exists (
-    select 1 from plantings
-    join gardens on gardens.id = plantings.garden_id
-    where plantings.id = harvests.planting_id and gardens.user_id = auth.uid()
-  ))
-  with check (exists (
     select 1 from plantings
     join gardens on gardens.id = plantings.garden_id
     where plantings.id = harvests.planting_id and gardens.user_id = auth.uid()
@@ -83,8 +76,7 @@ alter table seedlings enable row level security;
 
 create policy "Users can manage seedlings in their gardens"
   on seedlings for all
-  using (exists (select 1 from gardens where gardens.id = seedlings.garden_id and gardens.user_id = auth.uid()))
-  with check (exists (select 1 from gardens where gardens.id = seedlings.garden_id and gardens.user_id = auth.uid()));
+  using (exists (select 1 from gardens where gardens.id = seedlings.garden_id and gardens.user_id = auth.uid()));
 
 -- Notes
 create table notes (
@@ -101,5 +93,4 @@ alter table notes enable row level security;
 
 create policy "Users can manage notes in their gardens"
   on notes for all
-  using (exists (select 1 from gardens where gardens.id = notes.garden_id and gardens.user_id = auth.uid()))
-  with check (exists (select 1 from gardens where gardens.id = notes.garden_id and gardens.user_id = auth.uid()));
+  using (exists (select 1 from gardens where gardens.id = notes.garden_id and gardens.user_id = auth.uid()));

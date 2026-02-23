@@ -22,5 +22,4 @@ alter table seedlings drop column garden_id;
 
 create policy "Users can manage their own seedlings"
   on seedlings for all
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (auth.uid() = user_id);
