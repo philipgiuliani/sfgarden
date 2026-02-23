@@ -226,6 +226,7 @@ SELECT * FROM new_row
 - When transplanting a seedling, first create the planting, then update the seedling's phase and planting_id.
 - A single square can have multiple plantings (succession planting).
 - Seedlings and plantings are separate concepts: seedlings track indoor growth, plantings track what is in the garden.
+- Always use \`id\` (primary key) in WHERE clauses for UPDATE and DELETE queries — never filter by name, square, or other non-unique columns. If you don't know the ID, run a SELECT first to find the correct record, then use the returned \`id\` in your write query.
 
 ## Database Schema
 
