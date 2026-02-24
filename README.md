@@ -79,6 +79,7 @@ The client will automatically discover the OAuth flow via the protected resource
 
 | Tool | Description |
 |------|-------------|
+| `get_schema` | Returns schema docs, rules, and query patterns for the garden database. Read-only and should be called before writing SQL. |
 | `execute_sql` | Execute any SQL query against the database. RLS is enforced — only the authenticated user's data is accessible. For writes (INSERT/UPDATE/DELETE), use a CTE with RETURNING to get results back. |
 
 ## Architecture

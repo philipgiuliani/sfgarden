@@ -9,7 +9,7 @@
 
 ## Key Concepts
 
-- **Single tool**: `execute_sql` — runs arbitrary SQL with RLS enforced via the user's JWT
+- **Tools**: `get_schema` (read-only schema/introspection) and `execute_sql` (SQL execution with RLS via the user's JWT)
 - **Dynamic schema**: The MCP server queries `information_schema` and `pg_constraint` on first request to generate schema docs. Cached in-memory per deploy. No hardcoded schema in code.
 - **Skill vs MCP instructions**: The skill (`.claude/skills/sfgarden/SKILL.md`) provides behavioral guidance (emoji grids, seedling phase warnings, language). The MCP server's `instructions` provide schema, coordinate system, and SQL patterns.
 

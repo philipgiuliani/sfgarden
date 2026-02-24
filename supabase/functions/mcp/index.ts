@@ -7,10 +7,11 @@ import { z } from "zod";
 // ── Environment ─────────────────────────────────────────────────────────────
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
-const SERVER_URL =
-  Deno.env.get("SERVER_URL") ?? `${SUPABASE_URL}/functions/v1/mcp`;
+const SERVER_URL = Deno.env.get("SERVER_URL") ??
+  `${SUPABASE_URL}/functions/v1/mcp`;
 
-const resourceMetadataUrl = `${SERVER_URL}/.well-known/oauth-protected-resource`;
+const resourceMetadataUrl =
+  `${SERVER_URL}/.well-known/oauth-protected-resource`;
 
 // ── CORS headers ────────────────────────────────────────────────────────────
 const CORS_HEADERS = {
@@ -22,7 +23,8 @@ const CORS_HEADERS = {
 };
 
 // ── MCP instructions ────────────────────────────────────────────────────────
-const STATIC_INSTRUCTIONS = `You are helping a user manage their square foot gardens. Always call get_schema before writing SQL queries to discover the database structure, rules, and query patterns.`;
+const STATIC_INSTRUCTIONS =
+  `You are helping a user manage their square foot gardens. Always call get_schema before writing SQL queries to discover the database structure, rules, and query patterns.`;
 
 // ── Schema introspection ────────────────────────────────────────────────────
 
@@ -47,7 +49,8 @@ interface CheckConstraint {
   definition: string;
 }
 
-const SCHEMA_TABLES = "'gardens', 'plantings', 'harvests', 'seedlings', 'notes'";
+const SCHEMA_TABLES =
+  "'gardens', 'plantings', 'harvests', 'seedlings', 'notes'";
 
 const COLUMNS_QUERY = `
   SELECT table_name, column_name, data_type, is_nullable, column_default
@@ -90,7 +93,9 @@ function formatType(dataType: string): string {
 function parseCheckValues(definition: string): string[] | null {
   const match = definition.match(/ANY\s*\(ARRAY\[(.*?)\]/);
   if (!match) return null;
-  return match[1].split(",").map((v) => v.trim().replace(/'([^']*)'::text/g, "$1"));
+  return match[1].split(",").map((v) =>
+    v.trim().replace(/'([^']*)'::text/g, "$1")
+  );
 }
 
 function buildSchemaMarkdown(
@@ -142,8 +147,8 @@ function buildSchemaMarkdown(
       const nullable = col.is_nullable === "YES" ? "yes" : "no";
       const dflt = col.column_default
         ? col.column_default
-            .replace("::text", "")
-            .replace("(gen_random_uuid())", "gen_random_uuid()")
+          .replace("::text", "")
+          .replace("(gen_random_uuid())", "gen_random_uuid()")
         : "";
 
       const notes: string[] = [];
@@ -165,7 +170,9 @@ function buildSchemaMarkdown(
       }
 
       rows.push(
-        `| ${col.column_name} | ${type} | ${nullable} | ${dflt} | ${notes.join("; ")} |`,
+        `| ${col.column_name} | ${type} | ${nullable} | ${dflt} | ${
+          notes.join("; ")
+        } |`,
       );
     }
 
@@ -247,10 +254,20 @@ function createMcpServer(
     },
   );
 
-  server.tool(
+  server.registerTool(
     "get_schema",
-    "Get the database schema for the Square Foot Garden database. Call this FIRST before writing any SQL queries to discover available tables, columns, types, and constraints.",
-    {},
+    {
+      title: "Get Database Schema",
+      description:
+        "Get the database schema for the Square Foot Garden database. Call this FIRST before writing any SQL queries to discover available tables, columns, types, and constraints.",
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+      inputSchema: {},
+    },
     async () => {
       const schema = await fetchSchemaInstructions(supabase);
       return {
@@ -259,24 +276,39 @@ function createMcpServer(
     },
   );
 
-  server.tool(
+  server.registerTool(
     "execute_sql",
-    "Execute a SQL query against the Square Foot Garden database. Returns a JSON array of rows. For writes (INSERT/UPDATE/DELETE), use a CTE with RETURNING to get results back. RLS is enforced — only the authenticated user's data is accessible. IMPORTANT: Call get_schema first if you don't know the table structure.",
     {
-      query: z.string().describe("The SQL query to execute"),
+      title: "Execute SQL",
+      description:
+        "Execute a SQL query against the Square Foot Garden database. Returns a JSON array of rows. For writes (INSERT/UPDATE/DELETE), use a CTE with RETURNING to get results back. RLS is enforced — only the authenticated user's data is accessible. IMPORTANT: Call get_schema first if you don't know the table structure.",
+      annotations: {
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: false,
+      },
+      inputSchema: {
+        query: z.string().describe("The SQL query to execute"),
+      },
     },
     async ({ query }) => {
       const { data, error } = await supabase.rpc("execute_sql", { query });
 
       if (error) {
         return {
-          content: [{ type: "text" as const, text: `SQL error: ${error.message}` }],
+          content: [{
+            type: "text" as const,
+            text: `SQL error: ${error.message}`,
+          }],
           isError: true,
         };
       }
 
       return {
-        content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],
+        content: [{
+          type: "text" as const,
+          text: JSON.stringify(data, null, 2),
+        }],
       };
     },
   );
@@ -303,8 +335,7 @@ app.get("/.well-known/oauth-protected-resource", (c) =>
     },
     200,
     CORS_HEADERS,
-  ),
-);
+  ));
 
 // ── MCP endpoint ────────────────────────────────────────────────────────────
 app.post("/", async (c) => {
@@ -346,11 +377,13 @@ app.post("/", async (c) => {
 });
 
 // GET / DELETE → Method Not Allowed (MCP spec)
-app.get("/", (c) =>
-  c.text("Method Not Allowed", 405, { ...CORS_HEADERS, Allow: "POST" }),
+app.get(
+  "/",
+  (c) => c.text("Method Not Allowed", 405, { ...CORS_HEADERS, Allow: "POST" }),
 );
-app.delete("/", (c) =>
-  c.text("Method Not Allowed", 405, { ...CORS_HEADERS, Allow: "POST" }),
+app.delete(
+  "/",
+  (c) => c.text("Method Not Allowed", 405, { ...CORS_HEADERS, Allow: "POST" }),
 );
 
 // ── Start server ────────────────────────────────────────────────────────────
