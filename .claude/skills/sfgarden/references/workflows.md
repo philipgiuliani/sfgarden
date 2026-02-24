@@ -5,21 +5,22 @@ Detailed workflows for the Square Foot Garden Tracker skill. See [SKILL.md](./SK
 ## Recording a Planting
 
 ```
-User: "Gestern habe ich Karotten in A1, A2 und A3 gepflanzt"
+User: "Gestern habe ich Karotten in NA1, NA2 und NA3 gepflanzt"
 ```
 
-1. Query the garden to verify it exists and coordinates are valid
-2. Check for existing active plantings in those squares (warn if found)
-3. Confirm with user what will be recorded
-4. Insert one row per square:
+1. Parse the short references: `NA1` → garden `N`, square `A1`
+2. Query the garden to verify it exists and coordinates are valid
+3. Check for existing active plantings in those squares (warn if found)
+4. Confirm with user what will be recorded
+5. Insert one row per square:
 
 ```sql
 WITH new_plantings AS (
   INSERT INTO plantings (garden_id, square, plant_name, variety, count, planted_at)
   VALUES
-    ('...', 'A1', 'Karotten', 'Nantes', 16, '2026-02-22'),
-    ('...', 'A2', 'Karotten', 'Nantes', 16, '2026-02-22'),
-    ('...', 'A3', 'Karotten', 'Nantes', 16, '2026-02-22')
+    ('N', 'A1', 'Karotten', 'Nantes', 16, '2026-02-22'),
+    ('N', 'A2', 'Karotten', 'Nantes', 16, '2026-02-22'),
+    ('N', 'A3', 'Karotten', 'Nantes', 16, '2026-02-22')
   RETURNING *
 )
 SELECT * FROM new_plantings
@@ -73,7 +74,7 @@ When transplanting, create the planting first, then link the seedling:
 -- Step 1: Create planting
 WITH new_planting AS (
   INSERT INTO plantings (garden_id, square, plant_name, variety, count, planted_at)
-  VALUES ('...', 'B3', 'Tomaten', 'Tigerella', 1, CURRENT_DATE)
+  VALUES ('N', 'B3', 'Tomaten', 'Tigerella', 1, CURRENT_DATE)
   RETURNING *
 )
 SELECT * FROM new_planting
@@ -90,15 +91,16 @@ WITH updated AS (
 SELECT * FROM updated
 ```
 
-Offer: "Soll ich auch gleich eine Pflanzung in Hochbeet X eintragen?"
+Offer: "Soll ich auch gleich eine Pflanzung in Hochbeet N eintragen?"
 
 ## Recording Harvests
 
 ```
-User: "Habe heute 200g Salat von B2 geerntet"
+User: "Habe heute 200g Salat von HB2 geerntet"
 ```
 
-1. Find the active planting in that square
+1. Parse: `HB2` → garden `H`, square `B2`
+2. Find the active planting in that square
 2. Insert harvest:
 
 ```sql
@@ -116,7 +118,7 @@ SELECT * FROM new_harvest
 ## Adding Notes
 
 ```
-User: "Hochbeet H hat Blattläuse am Salat in B3"
+User: "H hat Blattläuse am Salat in B3"
 ```
 
 Auto-categorize:
@@ -181,9 +183,9 @@ ORDER BY sown_at DESC
 
 ### Planting
 ```
-User: "Gestern habe ich Karotten in A1, A2 und A3 von Hochbeet Nord gepflanzt"
+User: "Gestern habe ich Karotten in NA1, NA2 und NA3 gepflanzt"
 Claude: "Ich trage folgendes ein:
-         • Karotten in Hochbeet Nord, Felder A1, A2 und A3 — 22.02.2026
+         • Karotten in Hochbeet N, Felder A1, A2 und A3 — 22.02.2026
          Welche Sorte? (Kann auch leer bleiben)"
 User: "Nantes"
 Claude: [Inserts 3 rows]
@@ -192,10 +194,10 @@ Claude: [Inserts 3 rows]
 
 ### Harvest with Status Update
 ```
-User: "Habe heute 200g Salat von H-B2 geerntet, hatte etwas Blattlausbefall"
-Claude: [Finds planting, inserts harvest + note]
+User: "Habe heute 200g Salat von HB2 geerntet, hatte etwas Blattlausbefall"
+Claude: [Finds planting in garden H, square B2, inserts harvest + note]
         "Eingetragen:
-         🌿 Ernte: 200g Salat von B2
+         🌿 Ernte: 200g Salat von HB2
          📝 Notiz: Blattlausbefall
 
          Soll diese Pflanzung als 'geerntet' markiert werden, oder erntest du noch weiter?"
@@ -203,8 +205,8 @@ Claude: [Finds planting, inserts harvest + note]
 
 ### Garden Layout
 ```
-User: "Zeig mir Hochbeet N"
-Claude: [Queries active plantings, renders markdown table]
+User: "Zeig mir N"
+Claude: [Queries active plantings for garden N, renders markdown table]
         "🌱 Hochbeet N (4×7 = 28 Felder)
 
         |   | A          | B           | C           | D         |
