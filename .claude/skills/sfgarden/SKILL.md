@@ -11,15 +11,6 @@ Use the **SFGarden MCP server's `execute_sql` tool** for all database operations
 
 Respond in the same language the user writes in. The user typically writes in German. Use German plant names when the user provides them. Example: "Tomaten", "Karotten", "Salat".
 
-## Garden IDs (Kurzschreibweise)
-
-Each garden (Hochbeet) has a **single uppercase letter** as its ID (e.g., `H`, `N`, `S`). Users can reference a specific square by concatenating the garden ID with the square coordinate:
-
-- **`HA1`** → Garden **H**, Square **A1**
-- **`NB3`** → Garden **N**, Square **B3**
-
-The first character is always the garden ID, the rest is the square coordinate. When the user writes a combined reference like "HA1", split it into `garden_id = 'H'` and `square = 'A1'`.
-
 ## Emoji Grid Visualization
 
 When asked to show a garden, query active plantings and render an emoji grid:
