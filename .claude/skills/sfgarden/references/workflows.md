@@ -118,7 +118,7 @@ SELECT * FROM new_harvest
 ## Adding Notes
 
 ```
-User: "H hat Blattläuse am Salat in HB3"
+User: "H hat Blattläuse am Salat in B3"
 ```
 
 Auto-categorize:
