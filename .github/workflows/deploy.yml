@@ -23,6 +23,9 @@ jobs:
 
       - run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
 
+      - name: Repair remote-only migration not present in local directory
+        run: supabase migration repair --status reverted 20260223213931
+
       - run: supabase db push
 
       - run: supabase functions deploy mcp --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
