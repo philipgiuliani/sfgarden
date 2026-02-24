@@ -1,6 +1,6 @@
 -- Simplify garden IDs to a single uppercase letter.
--- The last character of the current id is used as the new id (uppercased).
--- Example: 'hochbeet-n' → 'N', 'hochbeet-h' → 'H'
+-- The last character of the garden name is used as the new id (uppercased).
+-- Example: name 'Hochbeet N' → 'N', name 'Hochbeet H' → 'H'
 --
 -- When users write "HA1", it means garden H, square A1.
 
@@ -8,9 +8,9 @@
 ALTER TABLE plantings DROP CONSTRAINT plantings_garden_id_fkey;
 ALTER TABLE notes DROP CONSTRAINT notes_garden_id_fkey;
 
--- 2. Build old → new mapping
+-- 2. Build old → new mapping (derive new ID from the last character of the name)
 CREATE TEMP TABLE _garden_id_map AS
-SELECT id AS old_id, upper(right(id, 1)) AS new_id FROM gardens;
+SELECT id AS old_id, upper(right(name, 1)) AS new_id FROM gardens;
 
 -- 3. Update child tables
 UPDATE plantings p
@@ -28,6 +28,10 @@ UPDATE gardens g
 SET id = m.new_id
 FROM _garden_id_map m
 WHERE g.id = m.old_id;
+
+-- 4b. Remove gardens whose names do not end with a letter and therefore could
+--     not be mapped to a single uppercase ID (e.g. names ending in a digit).
+DELETE FROM gardens WHERE id !~ '^[A-Z]$';
 
 DROP TABLE _garden_id_map;
 
